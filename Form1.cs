@@ -1,10 +1,12 @@
-﻿using System;
+﻿using org.mariuszgromada.math.mxparser;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -30,8 +32,11 @@ namespace Graph_Calculator
         Graphics bigG;
         Pen mainAxisPen = new Pen(Color.Red, 2);
         Pen secondaryAxisPen = new Pen(Color.LightGray, .01f);
-        Equation eq = new Equation();
+        Pen graphPen = new Pen(Color.BlueViolet, .01f);
+        StringToFormula eq = new StringToFormula();
         ToolTip tt = new ToolTip();
+        float width;
+        float height;
 
 
         private void PictureBox_MouseWheel(object sender, MouseEventArgs e)
@@ -40,11 +45,13 @@ namespace Graph_Calculator
             {
                 units++;
                 canvasPictBox.Refresh();
+                plot();
             }
             if (e.Delta <= 100 && units > 5)
             {
                 units--;
                 canvasPictBox.Refresh();
+                plot();
             }
         }
 
@@ -55,8 +62,9 @@ namespace Graph_Calculator
         }
         public void initializeComponent(object sender, PaintEventArgs e)
         {
-            float width = canvasPictBox.Width;
-            float height = canvasPictBox.Height;
+            width = canvasPictBox.Width;
+            height = canvasPictBox.Height;
+
 
             bigG = e.Graphics;
 
@@ -69,7 +77,7 @@ namespace Graph_Calculator
 
                 bigG.DrawLine(
                     secondaryAxisPen,
-                    (float)((width / 2) + (units * i)) +horizontalOffset,
+                    (float)((width / 2) + (units * i)) + horizontalOffset,
                     0,
                     (float)((width / 2) + (units * i)) + horizontalOffset,
                     height
@@ -77,8 +85,8 @@ namespace Graph_Calculator
 
                 bigG.DrawLine(
                     secondaryAxisPen,
-                    (float)((width / 2) - (units * i))  + horizontalOffset,
-                    0 ,
+                    (float)((width / 2) - (units * i)) + horizontalOffset,
+                    0,
                   (float)((width / 2) - (units * i)) + horizontalOffset,
                   height
                   );
@@ -90,7 +98,7 @@ namespace Graph_Calculator
                     0,
                     (float)((height / 2) + (units * i)) + verticalOffset,
                     width,
-                    (float)((height / 2) + (units * i)) +verticalOffset
+                    (float)((height / 2) + (units * i)) + verticalOffset
                     );
                 bigG.DrawLine(
                     secondaryAxisPen,
@@ -122,9 +130,8 @@ namespace Graph_Calculator
         }
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
-            eq.text = eq1txt.Text;
-            //Console.WriteLine(eq.text);
-
+            canvasPictBox.Refresh();
+            plot();
         }
         private void canvasPictBox_MouseDown(object sender, MouseEventArgs e)
         {
@@ -139,6 +146,7 @@ namespace Graph_Calculator
             verticalOffset += e.Y - mousePositionY;
             //Console.WriteLine($"X offset: {horizontalOffset} Y offset: {verticalOffset}");
             canvasPictBox.Refresh();
+            plot();
         }
 
 
@@ -149,14 +157,67 @@ namespace Graph_Calculator
             string position = $"X: {MousePosition.X} Y: {MousePosition.Y}";
             tt.SetToolTip(canvasPictBox, position);
         }
+
+
+        internal void plot()
+        {
+            List<PointF> points = new List<PointF>();
+            Argument x;
+            Expression eq;
+            double v;
+            for (int i = 0; i < 10; i++)
+            {
+                x = new Argument("x = " + i);
+                eq = new Expression(eq1txt.Text, x);
+                v = eq.calculate();
+                try
+                {
+                    points.Add(new PointF(width / 2 + (float)(i * units + horizontalOffset), height / 2 + (float)(v * units * -1 + verticalOffset)));
+
+                }
+                catch (Exception)
+                {
+
+                    //throw;
+                }
+            }
+            for (int i = 10 - 1; i >= 0; i--)
+            {
+                x = new Argument("x = " + i * -1);
+                eq = new Expression(eq1txt.Text, x);
+                v = eq.calculate();
+                try
+                {
+                    points.Add(new PointF(width / 2 + (float)(-1 * i * units + horizontalOffset), height / 2 + (float)(v * units * -1 + verticalOffset)));
+
+                }
+                catch (Exception)
+                {
+
+                    //throw;
+                }
+            }
+
+            try
+            {
+                PointF[] sortedPoints = points.OrderBy(point => point.X).ToArray();
+                bigG = canvasPictBox.CreateGraphics();
+                bigG.DrawLines(graphPen, sortedPoints);
+            }
+            catch (Exception)
+            {
+
+                //throw;
+            }
+
+        }
+
+        private void Form1_SizeChanged(object sender, EventArgs e)
+        {
+            canvasPictBox.Refresh();
+            plot();
+        }
     }
-    class Equation
-    {
-        public string text { get; set; }
-    }
-    class Point
-    {
-        public float X { get; set; }
-        public float Y { get; set; }
-    }
+
+
 }
